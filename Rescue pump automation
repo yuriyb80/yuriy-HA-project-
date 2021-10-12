@@ -1,0 +1,91 @@
+esphome:
+  name: rescue-pump
+  platform: ESP8266
+  board: esp01_1m
+
+# Enable logging
+logger:
+
+# Enable Home Assistant API
+api:
+
+ota:
+  password: ""
+
+wifi:
+  ssid: ""
+  password: ""
+
+  # Enable fallback hotspot (captive portal) in case wifi connection fails
+  ap:
+    ssid: "Rescue-Pump Fall"
+    password: ""
+
+captive_portal:
+web_server:
+  port: 80
+
+  # ========GPIO Connection=======
+
+  # GPIO2 - pump_relay (D4)
+  # GPIO0 - push_button (D3)
+  # GPIO4 - sensor_bottom (D2)
+  # GPIO5 - sensor_top (D1)
+
+binary_sensor:
+  - platform: gpio
+    id: sensor_top
+    name: "sensor top"
+    device_class: moisture
+    pin:
+      number: GPIO5
+      mode: INPUT_PULLUP
+      inverted: True
+    filters:
+      - delayed_on: 10ms  
+    on_press:
+      if:
+        condition:
+          binary_sensor.is_on: sensor_bottom
+        then:
+          - switch.turn_on: pump_switch
+    
+  - platform: gpio
+    id: sensor_bottom
+    name: "sensor bottom"
+    device_class: moisture
+    pin:
+      number: GPIO4
+      mode: INPUT_PULLUP
+      inverted: True
+    filters:
+      - delayed_on: 10ms  
+    on_release:
+
+          - switch.turn_off: pump_switch
+
+#push button
+  - platform: gpio
+    pin:
+      number: GPIO0
+      mode: INPUT_PULLUP
+      inverted: True
+    name: "push button"
+    id: push_button
+    on_release:
+      if:
+        condition:
+          binary_sensor.is_on: sensor_bottom
+        then:
+          - switch.toggle: pump_switch
+    filters:
+      - delayed_on: 10ms  
+      
+# pump relay  GPIO2(D4) 
+switch:
+  - platform: gpio
+    id: pump_switch
+    name: "rescue_pump"
+    pin: GPIO2
+    #inverted: True
+    restore_mode: ALWAYS_OFF
